@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: virtual-card-platform
+  profiles:
+    active: local
+  liquibase:
+    change-log: classpath:liquibase/changelog/changelog-master.yml
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+logging:
+  level:
+    com.cardplatform: INFO
+    org.springframework.transaction: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
