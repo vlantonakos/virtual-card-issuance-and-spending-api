@@ -1,0 +1,169 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-cards-table
+      author: dev
+      changes:
+        - createTable:
+            tableName: cards
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: cardholder_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: balance
+                  type: DECIMAL(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(20)
+                  defaultValue: 'ACTIVE'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version
+                  type: BIGINT
+                  defaultValue: '0'
+                  constraints:
+                    nullable: false
+      rollback:
+        - dropTable:
+            tableName: cards
+  - changeSet:
+      id: 002-create-transactions-table
+      author: dev
+      changes:
+        - createTable:
+            tableName: transactions
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: card_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: type
+                  type: VARCHAR(10)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: amount
+                  type: DECIMAL(19,2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: transactions
+            baseColumnNames: card_id
+            referencedTableName: cards
+            referencedColumnNames: id
+            constraintName: fk_transactions_card_id
+            onDelete: CASCADE
+            onUpdate: RESTRICT
+      rollback:
+        - dropTable:
+            tableName: transactions
+  - changeSet:
+      id: 003-create-indexes
+      author: dev
+      changes:
+        - createIndex:
+            tableName: transactions
+            indexName: idx_transactions_card_id_created_at
+            columns:
+              - column:
+                  name: card_id
+              - column:
+                  name: created_at
+                  descending: true
+        - createIndex:
+            tableName: transactions
+            indexName: idx_transactions_created_at
+            columns:
+              - column:
+                  name: created_at
+                  descending: true
+      rollback:
+        - dropIndex:
+            tableName: transactions
+            indexName: idx_transactions_card_id_created_at
+        - dropIndex:
+            tableName: transactions
+            indexName: idx_transactions_created_at
+  # Oracle-only constraints
+  - changeSet:
+      id: 004-add-constraints-oracle
+      author: dev
+      dbms: oracle
+      changes:
+        - addCheckConstraint:
+            tableName: cards
+            constraintName: chk_cards_balance_non_negative
+            checkCondition: "balance >= 0"
+        - addCheckConstraint:
+            tableName: transactions
+            constraintName: chk_transactions_amount_positive
+            checkCondition: "amount > 0"
+        - addCheckConstraint:
+            tableName: cards
+            constraintName: chk_cards_status_valid
+            checkCondition: "status IN ('ACTIVE', 'BLOCKED')"
+        - addCheckConstraint:
+            tableName: transactions
+            constraintName: chk_transactions_type_valid
+            checkCondition: "type IN ('SPEND', 'TOPUP')"
+      rollback:
+        - dropCheckConstraint:
+            tableName: cards
+            constraintName: chk_cards_balance_non_negative
+        - dropCheckConstraint:
+            tableName: transactions
+            constraintName: chk_transactions_amount_positive
+        - dropCheckConstraint:
+            tableName: cards
+            constraintName: chk_cards_status_valid
+        - dropCheckConstraint:
+            tableName: transactions
+            constraintName: chk_transactions_type_valid
+  # H2-compatible constraints using SQL
+  - changeSet:
+      id: 005-add-constraints-h2
+      author: dev
+      dbms: h2
+      changes:
+        - sql:
+            sql: |
+              ALTER TABLE cards ADD CONSTRAINT chk_cards_balance_non_negative CHECK (balance >= 0);
+              ALTER TABLE transactions ADD CONSTRAINT chk_transactions_amount_positive CHECK (amount > 0);
+              ALTER TABLE cards ADD CONSTRAINT chk_cards_status_valid CHECK (status IN ('ACTIVE', 'BLOCKED'));
+              ALTER TABLE transactions ADD CONSTRAINT chk_transactions_type_valid CHECK (type IN ('SPEND', 'TOPUP'));
+      rollback:
+        - sql:
+            sql: |
+              ALTER TABLE cards DROP CONSTRAINT chk_cards_balance_non_negative;
+              ALTER TABLE transactions DROP CONSTRAINT chk_transactions_amount_positive;
+              ALTER TABLE cards DROP CONSTRAINT chk_cards_status_valid;
+              ALTER TABLE transactions DROP CONSTRAINT chk_transactions_type_valid;

@@ -1,5 +1,6 @@
-package com.cardplatform.domain.model;
+package com.cardplatform.domain.model.transaction;
 
+import com.cardplatform.domain.model.card.CardId;
 import com.cardplatform.domain.model.enums.TransactionType;
 import lombok.AllArgsConstructor;
 import lombok.Data;

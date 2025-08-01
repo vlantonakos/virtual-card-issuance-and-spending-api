@@ -1,4 +1,4 @@
-package com.cardplatform.domain.model;
+package com.cardplatform.domain.model.transaction;
 
 import lombok.*;
 

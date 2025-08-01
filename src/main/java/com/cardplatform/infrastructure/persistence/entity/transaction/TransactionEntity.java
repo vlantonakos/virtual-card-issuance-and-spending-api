@@ -1,6 +1,7 @@
-package com.cardplatform.infrastructure.persistence.entity;
+package com.cardplatform.infrastructure.persistence.entity.transaction;
 
-import com.cardplatform.domain.model.enums.CardStatus;
+import com.cardplatform.domain.model.enums.TransactionType;
+import com.cardplatform.infrastructure.persistence.entity.card.CardEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -10,16 +11,15 @@ import org.hibernate.annotations.GenericGenerator;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "cards")
+@Table(name = "transactions")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CardEntity {
+public class TransactionEntity {
 
     @Id
     @GeneratedValue(generator = "UUID")
@@ -27,27 +27,19 @@ public class CardEntity {
     @Column(name = "id", updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "cardholder_name", nullable = false)
-    private String cardholderName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "card_id", nullable = false)
+    private CardEntity card;
 
-    @Column(name = "balance", nullable = false, precision = 19, scale = 2)
-    private BigDecimal balance;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false)
+    private TransactionType type;
+
+    @Column(name = "amount", nullable = false, precision = 19, scale = 2)
+    private BigDecimal amount;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    @Builder.Default
-    private CardStatus status = CardStatus.ACTIVE;
-
-    @Version
-    @Column(name = "version")
-    @Builder.Default
-    private Long version = 0L;
-
-    @OneToMany(mappedBy = "card", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<TransactionEntity> transactions;
 
     @PrePersist
     protected void onCreate() {
