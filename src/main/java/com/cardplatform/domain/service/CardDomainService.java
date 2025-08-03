@@ -1,5 +1,6 @@
 package com.cardplatform.domain.service;
 
+import com.cardplatform.domain.exception.CardNotFoundException;
 import com.cardplatform.domain.model.card.Card;
 import com.cardplatform.domain.model.card.CardId;
 import com.cardplatform.domain.model.transaction.Transaction;
@@ -131,7 +132,7 @@ public class CardDomainService {
     public Card getCard(CardId cardId) {
         log.debug("Retrieving card: {}", cardId);
         return cardRepository.findById(cardId)
-                .orElseThrow(() -> new IllegalStateException("Card not found: " + cardId));
+                .orElseThrow(() -> new CardNotFoundException(cardId.toString()));
     }
 
     /**

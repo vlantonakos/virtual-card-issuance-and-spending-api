@@ -1,6 +1,7 @@
 package com.cardplatform.infrastructure.web.controller;
 
 import com.cardplatform.application.CardApplicationService;
+import com.cardplatform.domain.exception.InvalidCardIdException;
 import com.cardplatform.domain.model.card.Card;
 import com.cardplatform.domain.model.card.CardId;
 import com.cardplatform.domain.model.transaction.Transaction;
@@ -29,96 +30,130 @@ import java.util.UUID;
 @Slf4j
 public class CardQueryController {
 
+    /**
+     * This controller handles queries related to card details, transaction history, balance, and status.
+     * It provides endpoints to retrieve information about a specific card.
+     */
     private final CardApplicationService cardApplicationService;
+
+    /**
+     * Mapper to convert domain object to DTO for API responses.
+     */
     private final CardDTOMapper cardDTOMapper;
+
+    /**
+     * Mapper to convert domain object to DTO for API responses.
+     */
     private final TransactionHistoryDTOMapper transactionHistoryDTOMapper;
 
     /**
-     * Retrieves card details by ID.
+     * Error message for invalid card ID format.
+     */
+    private static final String INVALID_CARD_ID_FORMAT = "Invalid card ID format: {}";
+
+    /**
+     * Retrieves the details of a specific card by its ID.
      *
-     * @param cardId the card identifier
-     * @return the card details
+     * @param cardId the unique identifier of the card
+     * @return ResponseEntity containing CardDTO with card details
      */
     @GetMapping("/{cardId}")
-    public ResponseEntity<CardDTO> getCard(@PathVariable UUID cardId) {
+    public ResponseEntity<CardDTO> getCard(@PathVariable String cardId) {
         log.info("Query: Retrieving card details for ID: {}", cardId);
+        try {
+            Card card = cardApplicationService.getCard(CardId.of(cardId));
+            CardDTO cardDTO = cardDTOMapper.mapTo(card);
 
-        Card card = cardApplicationService.getCard(CardId.of(cardId));
-        CardDTO cardDTO = cardDTOMapper.mapTo(card);
-
-        log.info("Query: Successfully retrieved card details for ID: {}", cardId);
-        return ResponseEntity.ok(cardDTO);
+            log.info("Query: Successfully retrieved card details for ID: {}", cardId);
+            return ResponseEntity.ok(cardDTO);
+        } catch (IllegalArgumentException e) {
+            log.warn(INVALID_CARD_ID_FORMAT, cardId);
+            throw new InvalidCardIdException(cardId, e);
+        }
     }
 
     /**
-     * Retrieves transaction history for a card with pagination.
+     * Retrieves the transaction history for a specific card with pagination.
      *
-     * @param cardId the card identifier
-     * @param page the page number (0-based)
-     * @param size the page size
-     * @return the paginated transaction history
+     * @param cardId the unique identifier of the card
+     * @param page the page number to retrieve (default is 0)
+     * @param size the number of transactions per page (default is 20)
+     * @return ResponseEntity containing TransactionHistoryResponseDTO with transaction history
      */
     @GetMapping("/{cardId}/transactions")
     public ResponseEntity<TransactionHistoryResponseDTO> getTransactionHistory(
-            @PathVariable UUID cardId,
+            @PathVariable String cardId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) int size) {
-
         log.info("Query: Retrieving transaction history for card: {}, page: {}, size: {}", cardId, page, size);
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Transaction> transactionPage = cardApplicationService.getTransactionHistory(
-                CardId.of(cardId),
-                pageable
-        );
+        try {
 
-        TransactionHistoryResponseDTO response = transactionHistoryDTOMapper.mapTo(transactionPage);
-        log.info("Query: Successfully retrieved {} transactions for card: {}",
-                response.getTransactions().size(), cardId);
+            Pageable pageable = PageRequest.of(page, size);
+            Page<Transaction> transactionPage = cardApplicationService
+                    .getTransactionHistory(CardId.of(cardId), pageable);
 
-        return ResponseEntity.ok(response);
+            TransactionHistoryResponseDTO response = transactionHistoryDTOMapper.mapTo(transactionPage);
+
+            log.info("Query: Successfully retrieved {} transactions for card: {}",
+                    response.getTransactions().size(), cardId);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid card ID format: {}", cardId);
+            throw new InvalidCardIdException(cardId, e);
+        }
     }
 
     /**
-     * Retrieves card balance (lightweight endpoint for balance checks).
+     * Retrieves the balance of a specific card.
      *
-     * @param cardId the card identifier
-     * @return the card balance information
+     * @param cardId the unique identifier of the card
+     * @return ResponseEntity containing CardBalanceDTO with card balance and status
      */
     @GetMapping("/{cardId}/balance")
-    public ResponseEntity<CardBalanceDTO> getCardBalance(@PathVariable UUID cardId) {
+    public ResponseEntity<CardBalanceDTO> getCardBalance(@PathVariable String cardId) {
         log.info("Query: Retrieving balance for card: {}", cardId);
+        try {
+            Card card = cardApplicationService.getCard(CardId.of(cardId));
 
-        Card card = cardApplicationService.getCard(CardId.of(cardId));
-        CardBalanceDTO balanceDTO = CardBalanceDTO.builder()
-                .cardId(card.getId().getValue())
-                .balance(card.getBalance())
-                .status(card.getStatus())
-                .build();
+            CardBalanceDTO balanceDTO = CardBalanceDTO.builder()
+                    .cardId(card.getId().getValue())
+                    .balance(card.getBalance())
+                    .status(card.getStatus())
+                    .build();
 
-        log.info("Query: Successfully retrieved balance for card: {}", cardId);
-        return ResponseEntity.ok(balanceDTO);
+            log.info("Query: Successfully retrieved balance for card: {}", cardId);
+            return ResponseEntity.ok(balanceDTO);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid card ID format: {}", cardId);
+            throw new InvalidCardIdException(cardId, e);
+        }
     }
 
     /**
-     * Retrieves card status (lightweight endpoint for status checks).
+     * Retrieves the status of a specific card.
      *
-     * @param cardId the card identifier
-     * @return the card status information
+     * @param cardId the unique identifier of the card
+     * @return ResponseEntity containing CardStatusDTO with card status and cardholder name
      */
     @GetMapping("/{cardId}/status")
-    public ResponseEntity<CardStatusDTO> getCardStatus(@PathVariable UUID cardId) {
+    public ResponseEntity<CardStatusDTO> getCardStatus(@PathVariable String cardId) {
         log.info("Query: Retrieving status for card: {}", cardId);
+        try {
+            Card card = cardApplicationService.getCard(CardId.of(cardId));
 
-        Card card = cardApplicationService.getCard(CardId.of(cardId));
-        CardStatusDTO statusDTO = CardStatusDTO.builder()
-                .cardId(card.getId().getValue())
-                .status(card.getStatus())
-                .cardholderName(card.getCardholderName())
-                .build();
+            CardStatusDTO statusDTO = CardStatusDTO.builder()
+                    .cardId(card.getId().getValue())
+                    .status(card.getStatus())
+                    .cardholderName(card.getCardholderName())
+                    .build();
 
-        log.info("Query: Successfully retrieved status for card: {}", cardId);
-        return ResponseEntity.ok(statusDTO);
+            log.info("Query: Successfully retrieved status for card: {}", cardId);
+            return ResponseEntity.ok(statusDTO);
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid card ID format: {}", cardId);
+            throw new InvalidCardIdException(cardId, e);
+        }
     }
 
 }

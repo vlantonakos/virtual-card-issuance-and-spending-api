@@ -1,5 +1,7 @@
 package com.cardplatform.infrastructure.web.exception.handler;
 
+import com.cardplatform.domain.exception.CardNotFoundException;
+import com.cardplatform.domain.exception.InvalidCardIdException;
 import com.cardplatform.infrastructure.web.exception.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -20,9 +22,60 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    /**
+     * This class handles global exceptions for the application.
+     * It provides a centralized way to manage exceptions and return appropriate error responses.
+     */
+    @ExceptionHandler(CardNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCardNotFoundException(CardNotFoundException ex, WebRequest request) {
+
+        log.warn("Card not found: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error("Card Not Found")
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Handles exceptions related to invalid card IDs.
+     * Returns a 400 Bad Request response with an error message.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with details of the error
+     */
+    @ExceptionHandler(InvalidCardIdException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidCardIdException(InvalidCardIdException ex, WebRequest request) {
+
+        log.warn("Invalid card ID: {}", ex.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Invalid Card ID")
+                .message(ex.getMessage())
+                .path(getPath(request))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    /**
+     * Handles exceptions related to business rule violations.
+     * Returns a 400 Bad Request response with an error message.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with details of the error
+     */
     @ExceptionHandler(IllegalStateException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalStateException(
-            IllegalStateException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
 
         log.error("Business rule violation: {}", ex.getMessage());
 
@@ -37,9 +90,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    /**
+     * Handles exceptions related to invalid arguments.
+     * Returns a 400 Bad Request response with an error message.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with details of the error
+     */
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(
-            IllegalArgumentException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex,
+                                                                        WebRequest request) {
 
         log.error("Invalid argument: {}", ex.getMessage());
 
@@ -54,9 +115,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    /**
+     * Handles validation exceptions for method arguments.
+     * Returns a 400 Bad Request response with validation error details.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with validation errors
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidationExceptions(
-            MethodArgumentNotValidException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex,
+                                                                    WebRequest request) {
 
         log.error("Validation failed: {}", ex.getMessage());
 
@@ -78,9 +147,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    /**
+     * Handles constraint violation exceptions.
+     * Returns a 400 Bad Request response with validation error details.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with validation errors
+     */
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolationException(
-            ConstraintViolationException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex,
+                                                                            WebRequest request) {
 
         log.error("Constraint violation: {}", ex.getMessage());
 
@@ -101,9 +178,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
 
+    /**
+     * Handles all other exceptions that are not specifically handled.
+     * Returns a 500 Internal Server Error response with a generic error message.
+     *
+     * @param ex the exception thrown
+     * @param request the web request
+     * @return ResponseEntity containing ErrorResponse with details of the error
+     */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGenericException(
-            Exception ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, WebRequest request) {
 
         log.error("Unexpected error occurred", ex);
 
