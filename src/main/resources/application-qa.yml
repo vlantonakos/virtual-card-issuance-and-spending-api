@@ -23,6 +23,8 @@ spring:
   liquibase:
     change-log: classpath:liquibase/changelog/changelog-master.yml
     enabled: true
+    parameters:
+      uuid.type: UUID
   jackson:
     serialization:
       write-dates-as-timestamps: false

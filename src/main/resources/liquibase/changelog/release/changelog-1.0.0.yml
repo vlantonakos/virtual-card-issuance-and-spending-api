@@ -5,10 +5,11 @@ databaseChangeLog:
       changes:
         - createTable:
             tableName: cards
+            schemaName: CARDPLATFORM
             columns:
               - column:
                   name: id
-                  type: BINARY(255)
+                  type: ${uuid.type}
                   constraints:
                     primaryKey: true
                     nullable: false
@@ -29,7 +30,7 @@ databaseChangeLog:
                     nullable: false
               - column:
                   name: status
-                  type: VARCHAR(20)
+                  type: VARCHAR(50)
                   defaultValue: 'ACTIVE'
                   constraints:
                     nullable: false
@@ -42,27 +43,30 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: cards
+            schemaName: CARDPLATFORM
+
   - changeSet:
       id: 002-create-transactions-table
       author: dev
       changes:
         - createTable:
             tableName: transactions
+            schemaName: CARDPLATFORM
             columns:
               - column:
                   name: id
-                  type: BINARY(255)
+                  type: ${uuid.type}
                   constraints:
                     primaryKey: true
                     nullable: false
               - column:
                   name: card_id
-                  type: BINARY(255)
+                  type: ${uuid.type}
                   constraints:
                     nullable: false
               - column:
                   name: type
-                  type: VARCHAR(10)
+                  type: VARCHAR(50)
                   constraints:
                     nullable: false
               - column:
@@ -77,8 +81,10 @@ databaseChangeLog:
                     nullable: false
         - addForeignKeyConstraint:
             baseTableName: transactions
+            baseTableSchemaName: CARDPLATFORM
             baseColumnNames: card_id
             referencedTableName: cards
+            referencedTableSchemaName: CARDPLATFORM
             referencedColumnNames: id
             constraintName: fk_transactions_card_id
             onDelete: CASCADE
@@ -86,12 +92,15 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: transactions
+            schemaName: CARDPLATFORM
+
   - changeSet:
       id: 003-create-indexes
       author: dev
       changes:
         - createIndex:
             tableName: transactions
+            schemaName: CARDPLATFORM
             indexName: idx_transactions_card_id_created_at
             columns:
               - column:
@@ -101,6 +110,7 @@ databaseChangeLog:
                   descending: true
         - createIndex:
             tableName: transactions
+            schemaName: CARDPLATFORM
             indexName: idx_transactions_created_at
             columns:
               - column:
@@ -109,7 +119,9 @@ databaseChangeLog:
       rollback:
         - dropIndex:
             tableName: transactions
+            schemaName: CARDPLATFORM
             indexName: idx_transactions_card_id_created_at
         - dropIndex:
             tableName: transactions
+            schemaName: CARDPLATFORM
             indexName: idx_transactions_created_at

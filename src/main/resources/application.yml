@@ -6,6 +6,8 @@ spring:
   liquibase:
     change-log: classpath:liquibase/changelog/changelog-master.yml
     enabled: true
+    default-schema: CARDPLATFORM
+    liquibase-schema: CARDPLATFORM
   jackson:
     serialization:
       write-dates-as-timestamps: false
