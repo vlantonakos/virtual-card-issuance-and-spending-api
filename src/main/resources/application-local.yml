@@ -1,7 +1,7 @@
 spring:
   datasource:
     url: jdbc:oracle:thin:@localhost:1521:XE
-    username: cardplatform
+    username: card_platform
     password: password
     driver-class-name: oracle.jdbc.OracleDriver
     hikari:
@@ -15,7 +15,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-      default_schema: CARDPLATFORM
+      default_schema: CARD_PLATFORM
     show-sql: false
     properties:
       hibernate:

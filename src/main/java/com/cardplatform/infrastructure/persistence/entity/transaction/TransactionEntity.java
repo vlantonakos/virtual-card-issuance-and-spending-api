@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "transactions", schema = "CARDPLATFORM")
+@Table(name = "transactions", schema = "CARD_PLATFORM")
 @Data
 @Builder
 @NoArgsConstructor

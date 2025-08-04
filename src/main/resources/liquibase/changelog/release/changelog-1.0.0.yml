@@ -5,7 +5,7 @@ databaseChangeLog:
       changes:
         - createTable:
             tableName: cards
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             columns:
               - column:
                   name: id
@@ -43,7 +43,7 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: cards
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
 
   - changeSet:
       id: 002-create-transactions-table
@@ -51,7 +51,7 @@ databaseChangeLog:
       changes:
         - createTable:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             columns:
               - column:
                   name: id
@@ -81,10 +81,10 @@ databaseChangeLog:
                     nullable: false
         - addForeignKeyConstraint:
             baseTableName: transactions
-            baseTableSchemaName: CARDPLATFORM
+            baseTableSchemaName: CARD_PLATFORM
             baseColumnNames: card_id
             referencedTableName: cards
-            referencedTableSchemaName: CARDPLATFORM
+            referencedTableSchemaName: CARD_PLATFORM
             referencedColumnNames: id
             constraintName: fk_transactions_card_id
             onDelete: CASCADE
@@ -92,7 +92,7 @@ databaseChangeLog:
       rollback:
         - dropTable:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
 
   - changeSet:
       id: 003-create-indexes
@@ -100,7 +100,7 @@ databaseChangeLog:
       changes:
         - createIndex:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             indexName: idx_transactions_card_id_created_at
             columns:
               - column:
@@ -110,7 +110,7 @@ databaseChangeLog:
                   descending: true
         - createIndex:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             indexName: idx_transactions_created_at
             columns:
               - column:
@@ -119,9 +119,9 @@ databaseChangeLog:
       rollback:
         - dropIndex:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             indexName: idx_transactions_card_id_created_at
         - dropIndex:
             tableName: transactions
-            schemaName: CARDPLATFORM
+            schemaName: CARD_PLATFORM
             indexName: idx_transactions_created_at

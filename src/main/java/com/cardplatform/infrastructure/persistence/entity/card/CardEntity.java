@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "cards", schema = "CARDPLATFORM")
+@Table(name = "cards", schema = "CARD_PLATFORM")
 @Data
 @Builder
 @NoArgsConstructor
