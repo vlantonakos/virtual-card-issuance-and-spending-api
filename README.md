@@ -82,3 +82,46 @@ This project implements the backend for a **Virtual Card Platform** where custom
 - Java 11 (OpenJDK 11.0.28)
 - Maven 3.8.7
 - Tested on Linux (WSL2)
+
+---
+
+## ⚖️ Trade-offs Made Due to Time Constraints
+
+### 1. Automated Deployment (Nx + Ansible)
+- **Planned:** Use Nx with `project.json` targets to streamline backend builds and define clear execution flows.
+- **Planned:** Automate infrastructure setup and deployment using Ansible playbooks for consistent environments.
+- **Trade-off:** This was deprioritized to focus on feature completeness, transactional safety, and concurrency correctness.
+
+---
+
+## 🚀 Potential Improvements
+
+- **OpenAPI (Swagger) Integration:**  
+  Add automatic API documentation using Swagger/OpenAPI for clearer and interactive API docs.
+
+- **Dedicated Validation Services:**  
+  Introduce separate validation services such as `CardValidationService` and `TransactionValidationService` that encapsulate business rules and validations. These services would be called from the **domain service layer (`CardDomainService`)** during operations like card creation, spending, and top-ups to ensure clean separation of concerns and maintainability.
+
+---
+
+## 📚 Learning Strategy for New Libraries and Tools
+
+During the development of this project, I learned important concepts and tools related to handling concurrency and ensuring data consistency.
+
+### Optimistic Locking with `@Version`
+
+At first, I explored **pessimistic locking** by using Spring Data JPA’s `@Lock(LockModeType.PESSIMISTIC_WRITE)` annotation to lock card records during updates. However, I discovered that using the `@Version` annotation for **optimistic locking** is a more efficient way to handle concurrent updates. This approach allows multiple transactions to proceed without locking, but automatically detects conflicting updates by version checking, throwing an `OptimisticLockException` when conflicts occur.
+
+### Integration Testing with Concurrency Tools
+
+I also had to adopt new libraries and Java concurrency tools to properly test concurrent behavior in integration tests. Specifically, I used:
+
+- `ExecutorService` to manage multiple threads.
+- `CountDownLatch` to coordinate simultaneous execution of threads.
+- `Future` to capture the results of asynchronous tasks.
+
+These tools were essential to simulate concurrent spend requests on the same card and verify that optimistic locking worked as expected, by ensuring one transaction succeeds while the other fails with a conflict (HTTP 409).
+
+This experience enhanced my ability to write robust integration tests for concurrent scenarios, which was new territory for me.
+
+---
