@@ -24,7 +24,14 @@ import java.util.UUID;
 @Slf4j
 public class CardCommandController {
 
+    /**
+     * Application service coordinating card-related use cases and orchestrating domain services.
+     */
     private final CardApplicationService cardApplicationService;
+
+    /**
+     * Mapper for converting between Card domain objects and CardDTO data transfer objects.
+     */
     private final CardDTOMapper cardDTOMapper;
 
     /**
@@ -56,9 +63,8 @@ public class CardCommandController {
      * @return the updated card
      */
     @PostMapping("/{cardId}/spend")
-    public ResponseEntity<CardDTO> spendFromCard(
-            @PathVariable UUID cardId,
-            @Valid @RequestBody TransactionRequestDTO spendRequest) {
+    public ResponseEntity<CardDTO> spendFromCard(@PathVariable UUID cardId,
+                                                 @Valid @RequestBody TransactionRequestDTO spendRequest) {
 
         log.info("Command: Processing spend transaction for card: {}, amount: {}", cardId, spendRequest.getAmount());
 
@@ -81,9 +87,8 @@ public class CardCommandController {
      * @return the updated card
      */
     @PostMapping("/{cardId}/topup")
-    public ResponseEntity<CardDTO> topUpCard(
-            @PathVariable UUID cardId,
-            @Valid @RequestBody TransactionRequestDTO topUpRequest) {
+    public ResponseEntity<CardDTO> topUpCard(@PathVariable UUID cardId,
+                                             @Valid @RequestBody TransactionRequestDTO topUpRequest) {
 
         log.info("Command: Processing top-up transaction for card: {}, amount: {}", cardId, topUpRequest.getAmount());
 

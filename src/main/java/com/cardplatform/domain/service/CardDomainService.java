@@ -22,18 +22,33 @@ import java.time.Instant;
 @Slf4j
 public class CardDomainService {
 
+    /**
+     * Repository for CRUD operations on {@link Card} entities.
+     */
     private final CardRepository cardRepository;
+
+    /**
+     * Repository for CRUD operations on {@link Transaction} entities.
+     */
     private final TransactionRepository transactionRepository;
 
+    /**
+     * Time window in minutes for rate limiting spend transactions.
+     */
     private static final int RATE_LIMIT_WINDOW_MINUTES = 1;
+
+    /**
+     * Maximum number of spend transactions allowed per rate limit window.
+     */
     private static final int MAX_SPENDS_PER_MINUTE = 5;
 
     /**
-     * Creates a new card with initial balance.
+     * Creates a new card with the specified cardholder name and initial balance.
+     * Also creates an initial top-up transaction if the initial balance is greater than zero.
      *
      * @param cardholderName the name of the cardholder
-     * @param initialBalance the initial balance
-     * @return the created card
+     * @param initialBalance the initial balance to fund the card
+     * @return the created and persisted {@link Card}
      */
     @Transactional
     public Card createCard(String cardholderName, BigDecimal initialBalance) {
@@ -58,13 +73,14 @@ public class CardDomainService {
     }
 
     /**
-     * Processes a spend transaction on a card.
+     * Processes a spend transaction by deducting the specified amount from the card balance.
+     * Enforces rate limiting to prevent excessive spends within a short time window.
      *
-     * @param cardId the card identifier
+     * @param cardId the identifier of the card to spend from
      * @param amount the amount to spend
-     * @return the updated card
-     * @throws IllegalStateException if card is not found, not active, or has insufficient balance
-     * @throws IllegalArgumentException if rate limit is exceeded
+     * @return the updated {@link Card} after the spend
+     * @throws IllegalStateException    if the card does not exist, is not active, or insufficient funds
+     * @throws IllegalArgumentException if the rate limit for spends is exceeded
      */
     @Transactional
     public Card spendFromCard(CardId cardId, BigDecimal amount) {
@@ -73,11 +89,10 @@ public class CardDomainService {
         // Check rate limiting
         checkRateLimit(cardId);
 
-        // Get card with pessimistic lock to prevent race conditions
-        Card card = cardRepository.findByIdWithLock(cardId)
+        Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalStateException("Card not found: " + cardId));
 
-        // Process the spend (domain logic)
+        // Process the spend
         card.spend(amount);
 
         // Save the updated card
@@ -92,22 +107,21 @@ public class CardDomainService {
     }
 
     /**
-     * Processes a top-up transaction on a card.
+     * Processes a top-up transaction by adding the specified amount to the card balance.
      *
-     * @param cardId the card identifier
-     * @param amount the amount to top up
-     * @return the updated card
-     * @throws IllegalStateException if card is not found or not active
+     * @param cardId the identifier of the card to top up
+     * @param amount the amount to add to the card balance
+     * @return the updated {@link Card} after the top-up
+     * @throws IllegalStateException if the card does not exist or is not active
      */
     @Transactional
     public Card topUpCard(CardId cardId, BigDecimal amount) {
         log.info("Processing top-up transaction for card: {}, amount: {}", cardId, amount);
 
-        // Get card with pessimistic lock
-        Card card = cardRepository.findByIdWithLock(cardId)
+        Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalStateException("Card not found: " + cardId));
 
-        // Process the top-up (domain logic)
+        // Process the top-up
         card.topUp(amount);
 
         // Save the updated card
@@ -122,11 +136,11 @@ public class CardDomainService {
     }
 
     /**
-     * Retrieves a card by its identifier.
+     * Retrieves the card by its unique identifier.
      *
-     * @param cardId the card identifier
-     * @return the card
-     * @throws IllegalStateException if card is not found
+     * @param cardId the identifier of the card
+     * @return the {@link Card} entity
+     * @throws CardNotFoundException if the card does not exist
      */
     public Card getCard(CardId cardId) {
         log.debug("Retrieving card: {}", cardId);
@@ -135,12 +149,12 @@ public class CardDomainService {
     }
 
     /**
-     * Retrieves transaction history for a card with pagination.
+     * Retrieves the paginated transaction history for a given card.
      *
-     * @param cardId the card identifier
-     * @param pageable pagination information
-     * @return page of transactions
-     * @throws IllegalStateException if card is not found
+     * @param cardId   the identifier of the card
+     * @param pageable pagination information such as page number and size
+     * @return a {@link Page} of {@link Transaction} objects
+     * @throws IllegalStateException if the card does not exist
      */
     public Page<Transaction> getTransactionHistory(CardId cardId, Pageable pageable) {
         log.debug("Retrieving transaction history for card: {}", cardId);
@@ -154,17 +168,18 @@ public class CardDomainService {
     }
 
     /**
-     * Blocks a card.
+     * Blocks the card to prevent further transactions.
      *
-     * @param cardId the card identifier
-     * @return the updated card
-     * @throws IllegalStateException if card is not found
+     * @param cardId the identifier of the card to block
+     * @return the updated {@link Card} after blocking
+     * @throws IllegalStateException if the card does not exist
      */
     @Transactional
     public Card blockCard(CardId cardId) {
         log.info("Blocking card: {}", cardId);
 
-        Card card = cardRepository.findByIdWithLock(cardId)
+        // Verify card exists
+        Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalStateException("Card not found: " + cardId));
 
         card.block();
@@ -175,17 +190,18 @@ public class CardDomainService {
     }
 
     /**
-     * Activates a card.
+     * Activates the card, allowing transactions to be processed.
      *
-     * @param cardId the card identifier
-     * @return the updated card
-     * @throws IllegalStateException if card is not found
+     * @param cardId the identifier of the card to activate
+     * @return the updated {@link Card} after activation
+     * @throws IllegalStateException if the card does not exist
      */
     @Transactional
     public Card activateCard(CardId cardId) {
         log.info("Activating card: {}", cardId);
 
-        Card card = cardRepository.findByIdWithLock(cardId)
+        // Verify card exists
+        Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new IllegalStateException("Card not found: " + cardId));
 
         card.activate();
@@ -196,18 +212,17 @@ public class CardDomainService {
     }
 
     /**
-     * Checks if the rate limit for spend transactions is exceeded.
+     * Checks whether the number of spend transactions within the rate limit window
+     * has exceeded the maximum allowed threshold.
      *
-     * @param cardId the card identifier
-     * @throws IllegalArgumentException if rate limit is exceeded
+     * @param cardId the identifier of the card
+     * @throws IllegalArgumentException if the rate limit has been exceeded
      */
     private void checkRateLimit(CardId cardId) {
         long currentTime = Instant.now().toEpochMilli();
         long windowStart = currentTime - (RATE_LIMIT_WINDOW_MINUTES * 60 * 1000);
 
-        long spendCount = transactionRepository.countByCardIdAndCreatedAtBetween(
-                cardId, windowStart, currentTime
-        );
+        long spendCount = transactionRepository.countByCardIdAndCreatedAtBetween(cardId, windowStart, currentTime);
 
         if (spendCount >= MAX_SPENDS_PER_MINUTE) {
             throw new IllegalArgumentException(

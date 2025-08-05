@@ -21,7 +21,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class CardDomainServiceTest {
+class CardDomainServiceTests {
 
     @Mock
     private CardRepository cardRepository;
@@ -70,7 +70,7 @@ class CardDomainServiceTest {
     @Order(2)
     void shouldProcessSpendTransactionSuccessfully_BusinessRule() {
         // Given
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.of(testCard));
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.of(testCard));
         when(cardRepository.save(any(Card.class))).thenReturn(testCard);
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mock(Transaction.class));
         when(transactionRepository.countByCardIdAndCreatedAtBetween(any(), anyLong(), anyLong())).thenReturn(0L);
@@ -84,7 +84,7 @@ class CardDomainServiceTest {
         assertEquals(CardStatus.ACTIVE, updatedCard.getStatus());
 
         // Verify pessimistic locking was used
-        verify(cardRepository, times(1)).findByIdWithLock(testCardId);
+        verify(cardRepository, times(1)).findById(testCardId);
         verify(cardRepository, times(1)).save(testCard);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
@@ -97,7 +97,7 @@ class CardDomainServiceTest {
         Card lowBalanceCard = Card.create("Poor User", new BigDecimal("10.00"));
         lowBalanceCard.setId(testCardId);
 
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.of(lowBalanceCard));
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.of(lowBalanceCard));
         when(transactionRepository.countByCardIdAndCreatedAtBetween(any(), anyLong(), anyLong())).thenReturn(0L);
 
         // When & Then
@@ -118,7 +118,7 @@ class CardDomainServiceTest {
     @Order(4)
     void shouldProcessTopUpTransactionSuccessfully_CoreFunctionality() {
         // Given
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.of(testCard));
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.of(testCard));
         when(cardRepository.save(any(Card.class))).thenReturn(testCard);
         when(transactionRepository.save(any(Transaction.class))).thenReturn(mock(Transaction.class));
 
@@ -130,7 +130,7 @@ class CardDomainServiceTest {
         assertEquals(new BigDecimal("150.00"), updatedCard.getBalance()); // 100 + 50
         assertEquals(CardStatus.ACTIVE, updatedCard.getStatus());
 
-        verify(cardRepository, times(1)).findByIdWithLock(testCardId);
+        verify(cardRepository, times(1)).findById(testCardId);
         verify(cardRepository, times(1)).save(testCard);
         verify(transactionRepository, times(1)).save(any(Transaction.class));
     }
@@ -152,7 +152,7 @@ class CardDomainServiceTest {
         assertTrue(exception.getMessage().contains("Maximum 5 spends per minute"));
 
         // Verify rate limiting prevented any database operations
-        verify(cardRepository, never()).findByIdWithLock(any());
+        verify(cardRepository, never()).findById(any());
         verify(cardRepository, never()).save(any(Card.class));
         verify(transactionRepository, never()).save(any(Transaction.class));
     }
@@ -162,7 +162,7 @@ class CardDomainServiceTest {
     @Order(6)
     void shouldBlockCardSuccessfully_BonusFeature() {
         // Given
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.of(testCard));
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.of(testCard));
         when(cardRepository.save(any(Card.class))).thenReturn(testCard);
 
         // When
@@ -172,7 +172,7 @@ class CardDomainServiceTest {
         assertNotNull(blockedCard);
         assertEquals(CardStatus.BLOCKED, blockedCard.getStatus());
 
-        verify(cardRepository, times(1)).findByIdWithLock(testCardId);
+        verify(cardRepository, times(1)).findById(testCardId);
         verify(cardRepository, times(1)).save(testCard);
     }
 
@@ -185,7 +185,7 @@ class CardDomainServiceTest {
         blockedCard.setId(testCardId);
         blockedCard.block(); // Block the card
 
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.of(blockedCard));
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.of(blockedCard));
         when(transactionRepository.countByCardIdAndCreatedAtBetween(any(), anyLong(), anyLong())).thenReturn(0L);
 
         // When & Then
@@ -206,7 +206,7 @@ class CardDomainServiceTest {
     @Order(8)
     void shouldHandleNonExistentCard_BusinessRule() {
         // Given
-        when(cardRepository.findByIdWithLock(testCardId)).thenReturn(Optional.empty());
+        when(cardRepository.findById(testCardId)).thenReturn(Optional.empty());
 
         // When & Then
         IllegalStateException exception = assertThrows(

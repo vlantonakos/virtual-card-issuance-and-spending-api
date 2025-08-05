@@ -17,6 +17,10 @@ import java.math.BigDecimal;
 @Slf4j
 public class CardApplicationService {
 
+    /**
+     * Service providing business logic and operations related to cards,
+     * such as creation, spending, top-ups, blocking, and activation.
+     */
     private final CardDomainService cardDomainService;
 
     /**

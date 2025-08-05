@@ -24,14 +24,6 @@ public interface CardRepository {
     Optional<Card> findById(CardId cardId);
 
     /**
-     * Finds a card by its identifier with pessimistic lock for concurrent operations.
-     *
-     * @param cardId the card identifier
-     * @return an optional containing the card if found
-     */
-    Optional<Card> findByIdWithLock(CardId cardId);
-
-    /**
      * Checks if a card exists by its identifier.
      *
      * @param cardId the card identifier

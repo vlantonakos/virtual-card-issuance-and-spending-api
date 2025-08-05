@@ -6,6 +6,7 @@ import com.cardplatform.infrastructure.web.exception.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,8 +24,38 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     /**
-     * This class handles global exceptions for the application.
-     * It provides a centralized way to manage exceptions and return appropriate error responses.
+     * Handles optimistic locking failures that occur when two or more concurrent requests
+     * attempt to update the same resource (e.g., Card entity) simultaneously.
+     * <p>
+     * Returns a 409 Conflict response with a clear error message, indicating to the client
+     * that a concurrent modification was detected and the request should be retried.
+     *
+     * @param ex      the ObjectOptimisticLockingFailureException thrown by Spring/Hibernate
+     * @param request the current web request
+     * @return ResponseEntity containing an ErrorResponse with conflict details
+     */
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(ObjectOptimisticLockingFailureException ex,
+                                                                        WebRequest request) {
+        log.warn("Optimistic locking failure: {}", ex.getMessage());
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(Instant.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message("Concurrent modification detected. Please retry your request.")
+                .path(getPath(request))
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * Handles exceptions thrown when a requested card resource is not found in the system.
+     * <p>
+     * Returns a 404 Not Found response with a descriptive error message.
+     *
+     * @param ex      the CardNotFoundException thrown when a card does not exist
+     * @param request the current web request
+     * @return ResponseEntity containing an ErrorResponse with not found details
      */
     @ExceptionHandler(CardNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleCardNotFoundException(CardNotFoundException ex, WebRequest request) {

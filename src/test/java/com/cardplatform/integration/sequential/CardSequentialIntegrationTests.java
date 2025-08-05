@@ -11,6 +11,7 @@ import com.cardplatform.infrastructure.web.dto.transaction.TransactionRequestDTO
 import com.cardplatform.infrastructure.web.exception.ErrorResponse;
 import com.cardplatform.integration.BaseCardIntegrationTest;
 import com.cardplatform.integration.manager.CardRequestManager;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -22,11 +23,12 @@ import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.util.UUID;
+import java.util.concurrent.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-public class CardSequentialIntegrationTest extends BaseCardIntegrationTest {
+public class CardSequentialIntegrationTests extends BaseCardIntegrationTest {
 
     private CardRequestManager requestManager;
     private ParameterizedTypeReference<CardDTO> cardTypeReference;
@@ -498,6 +500,84 @@ public class CardSequentialIntegrationTest extends BaseCardIntegrationTest {
         assertEquals(HttpStatus.BAD_REQUEST, zeroResponse.getStatusCode());
     }
 
+    /**
+     * Tests that concurrent spend transactions on the same card trigger optimistic locking.
+     * <p>
+     * Verifies that:
+     * - Only one of two concurrent spends can succeed (balance is only decremented once)
+     * - At least one request fails due to optimistic locking (HTTP 409 or exception)
+     */
+    @Test
+    @Order(20)
+    public void shouldFailWithOptimisticLockOnConcurrentSpend() throws Exception {
+        // Create a new card with sufficient balance
+        CreateCardRequestDTO createRequest = new CreateCardRequestDTO();
+        createRequest.setCardholderName("Concurrent User");
+        createRequest.setInitialBalance(BigDecimal.valueOf(100.0));
+
+        ResponseEntity<String> createResponse = requestManager.makePostRequest(createRequest);
+        UUID concurrentCardId = getCreatedCardId(createResponse);
+
+        // Prepare a spend request to be run in two concurrent threads
+        TransactionRequestDTO spendRequest = new TransactionRequestDTO();
+        spendRequest.setAmount(BigDecimal.valueOf(40.0)); // Both will try to spend 40 from 100
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch readyLatch = new CountDownLatch(2);
+        CountDownLatch startLatch = new CountDownLatch(1);
+
+        //Simulate two concurrent spends using Callable tasks
+        Callable<ResponseEntity<?>> spendTask = () -> {
+            readyLatch.countDown();
+            startLatch.await();
+
+            ResponseEntity<String> rawResponse = requestManager.makeTransactionRequestRaw(
+                    concurrentCardId, spendRequest, "spend");
+
+            HttpStatus status = rawResponse.getStatusCode();
+            String body = rawResponse.getBody();
+            ObjectMapper objectMapper = getObjectMapper();
+
+            // Deserialize response based on HTTP status
+            if (status.is2xxSuccessful()) {
+                CardDTO card = objectMapper.readValue(body, CardDTO.class);
+                return new ResponseEntity<>(card, status);
+            } else {
+                ErrorResponse error = objectMapper.readValue(body, ErrorResponse.class);
+                return new ResponseEntity<>(error, status);
+            }
+        };
+
+        // Submit both spend tasks
+        Future<ResponseEntity<?>> future1 = executor.submit(spendTask);
+        Future<ResponseEntity<?>> future2 = executor.submit(spendTask);
+
+        // Wait until both threads are ready to start
+        readyLatch.await();
+        // Start both threads at once
+        startLatch.countDown();
+
+        // Collect results, catching both HTTP errors and thrown exceptions
+        boolean oneSuccess = false;
+        boolean oneFailedByOptimisticLockException = false;
+
+        // Iterate over the results of both concurrent spend attempts,
+        // checking if at least one succeeded and at least one failed
+        for (Future<ResponseEntity<?>> future : new Future[]{future1, future2}) {
+            ResponseEntity<?> response = future.get(5, TimeUnit.SECONDS);
+            if (response.getStatusCode().is2xxSuccessful()) {
+                oneSuccess = true;
+            } else if (response.getStatusCode() == HttpStatus.CONFLICT) {
+                oneFailedByOptimisticLockException = true;
+            }
+        }
+
+        executor.shutdownNow();
+
+        assertTrue(oneSuccess, "At least one spend should succeed");
+        assertTrue(oneFailedByOptimisticLockException,
+                "At least one spend should fail due to optimistic locking (HTTP 409 or exception)");
+    }
 
     /**
      * Extracts card ID from create card response.

@@ -108,6 +108,27 @@ public class CardRequestManager {
     }
 
     /**
+     * Makes a POST request for card transactions (spend/topup) and returns the raw response as a String.
+     * This is useful for concurrent test scenarios where the response could be either a success (CardDTO)
+     * or an error (ErrorResponse), and parsing is handled by the test logic.
+     *
+     * @param cardId The card identifier
+     * @param dto The transaction DTO
+     * @param operation The operation (spend/topup)
+     * @return ResponseEntity containing the raw JSON response as a String
+     */
+    public <T> ResponseEntity<String> makeTransactionRequestRaw(final UUID cardId, final T dto,
+                                                                final String operation) {
+        HttpEntity<T> request = new HttpEntity<>(dto, createJsonHeaders());
+        return testRestTemplate.exchange(
+                baseUrl + "/" + cardId + "/" + operation,
+                HttpMethod.POST,
+                request,
+                String.class
+        );
+    }
+
+    /**
      * Makes a PUT request to update card status (block/activate).
      *
      * @param cardId The card identifier

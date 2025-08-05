@@ -25,10 +25,28 @@ import java.util.Optional;
 @Slf4j
 public class TransactionRepositoryAdapter implements TransactionRepository {
 
+    /**
+     * JPA repository for Transaction entities.
+     */
     private final TransactionJpaRepository transactionJpaRepository;
+
+    /**
+     * JPA repository for Card entities.
+     */
     private final CardJpaRepository cardJpaRepository;
+
+    /**
+     * Mapper to convert between Transaction domain objects and entities.
+     */
     private final TransactionEntityMapper transactionEntityMapper;
 
+    /**
+     * Saves a transaction, establishing its association with a card.
+     *
+     * @param transaction the transaction to save
+     * @return the saved transaction domain object
+     * @throws IllegalStateException if the associated card is not found
+     */
     @Override
     public Transaction save(Transaction transaction) {
         log.debug("Saving transaction with ID: {}", transaction.getId());
@@ -47,6 +65,12 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         return savedTransaction;
     }
 
+    /**
+     * Finds a transaction by its identifier.
+     *
+     * @param transactionId the transaction identifier
+     * @return an Optional containing the transaction if found, otherwise empty
+     */
     @Override
     public Optional<Transaction> findById(TransactionId transactionId) {
         log.debug("Finding transaction by ID: {}", transactionId);
@@ -55,6 +79,13 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
                 .map(transactionEntityMapper::mapToDomain);
     }
 
+    /**
+     * Finds transactions for a specific card, paginated and sorted by creation date descending.
+     *
+     * @param cardId the card identifier
+     * @param pageable pagination information
+     * @return a page of transactions for the card
+     */
     @Override
     public Page<Transaction> findByCardId(CardId cardId, Pageable pageable) {
         log.debug("Finding transactions by card ID: {} with pagination", cardId);
@@ -65,6 +96,12 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         return entityPage.map(transactionEntityMapper::mapToDomain);
     }
 
+    /**
+     * Finds all transactions for a specific card, sorted by creation date descending.
+     *
+     * @param cardId the card identifier
+     * @return list of all transactions for the card
+     */
     @Override
     public List<Transaction> findByCardId(CardId cardId) {
         log.debug("Finding all transactions by card ID: {}", cardId);
@@ -75,6 +112,14 @@ public class TransactionRepositoryAdapter implements TransactionRepository {
         return transactionEntityMapper.mapToDomain(entities);
     }
 
+    /**
+     * Counts the number of SPEND transactions for a card between two timestamps.
+     *
+     * @param cardId the card identifier
+     * @param fromTimestamp the start of the time window (inclusive), in milliseconds since epoch
+     * @param toTimestamp the end of the time window (inclusive), in milliseconds since epoch
+     * @return the count of SPEND transactions within the time window
+     */
     @Override
     public long countByCardIdAndCreatedAtBetween(CardId cardId, long fromTimestamp, long toTimestamp) {
         log.debug("Counting SPEND transactions for card ID: {} between {} and {}",
