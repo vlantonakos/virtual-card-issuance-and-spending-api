@@ -30,3 +30,5 @@ logging:
     org.springframework.transaction: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+  file:
+    name: logs/application.log
