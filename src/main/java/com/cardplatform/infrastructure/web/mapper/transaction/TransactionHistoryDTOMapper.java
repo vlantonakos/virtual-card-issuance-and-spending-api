@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TransactionHistoryDTOMapper {
 
+    /**
+     * Mapper to convert domain object to DTO for API responses.
+     */
     private final TransactionDTOMapper transactionDTOMapper;
 
     /**
